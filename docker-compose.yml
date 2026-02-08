@@ -1,0 +1,49 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: sender_bot_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: pv_bot
+      MYSQL_USER: becherostam
+      MYSQL_PASSWORD: "123Q"
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpass123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sender_bot_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PV_BOT_TOKEN: "${PV_BOT_TOKEN:-8569302405:AAHuvCca8pS6OPRwmV46kC-K7ix_RtSc6jc}"
+      PV_DB_HOST: db
+      PV_DB_PORT: "3306"
+      PV_DB_NAME: pv_bot
+      PV_DB_USER: becherostam
+      PV_DB_PASS: "123Q"
+      PV_PYTHON: python3
+    volumes:
+      - ./sessions:/app/sessions
+      - ./logs:/app/logs
+      - ./export:/app/export
+      - ./files:/app/files
+
+volumes:
+  mysql_data:
