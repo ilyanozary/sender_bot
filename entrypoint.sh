@@ -36,6 +36,35 @@ done
 echo "Running database migrations (db.py)..."
 python3 db.py || echo "WARNING: db.py had issues (may be OK if tables already exist)"
 
-# Start the application
-echo "Starting application via run.py..."
-exec python3 run.py
+# Start background workers
+echo "Starting background workers..."
+python3 cron_settings.py &
+echo "  - cron_settings.py (PID $!)"
+
+python3 cron_operation.py &
+echo "  - cron_operation.py (PID $!)"
+
+python3 tl_outbox_worker.py &
+echo "  - tl_outbox_worker.py (PID $!)"
+
+# Start inbox listeners for logged-in accounts
+python3 -c "
+import os, subprocess, utility as utl
+directory = os.path.dirname(os.path.abspath('bot.py'))
+try:
+    cs = utl.Database().data()
+    cs.execute(f\"SELECT uniq_id FROM {utl.mbots} WHERE user_id IS NOT NULL AND status=1\")
+    result = cs.fetchall()
+    for row in result:
+        uniq = row.get('uniq_id')
+        if uniq:
+            subprocess.Popen(['python3', f'tl_inbox_listener.py', uniq])
+            print(f'  - tl_inbox_listener.py {uniq}')
+except Exception as e:
+    print(f'  (no inbox listeners started: {e})')
+" 2>&1 || true
+
+# Start bot.py in FOREGROUND (it blocks on updater.idle())
+# This keeps the container alive
+echo "Starting bot.py (foreground)..."
+exec python3 bot.py
