@@ -1,6 +1,6 @@
 import os
 
-admins = [7459925039]  # Admin UserIDs
+admins = [7459925039,132940913]  # Admin UserIDs
 token = os.getenv("PV_BOT_TOKEN", "8569302405:AAHuvCca8pS6OPRwmV46kC-K7ix_RtSc6jc")  # Bot Token
 
 # Database settings (override via environment variables)
